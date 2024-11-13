@@ -193,6 +193,28 @@ def display_text(text, time):
     else:
         print(text)
 
+def delete_current_image_and_annotations(image_path):
+    # Deletar a imagem
+    if os.path.exists(image_path):
+        os.remove(image_path)
+        print(f"Imagem {image_path} deletada.")
+    # Gerar caminhos para os arquivos .txt e .xml
+    base_filename = os.path.splitext(os.path.basename(image_path))[0]
+    txt_path = os.path.join('output', 'YOLO_darknet', base_filename + '.txt')
+    xml_path = os.path.join('output', 'PASCAL_VOC', base_filename + '.xml')
+    # Deletar o arquivo .txt correspondente
+    if os.path.exists(txt_path):
+        os.remove(txt_path)
+        print(f"Arquivo {txt_path} deletado.")
+    else:
+        print(f"Arquivo {txt_path} não encontrado.")
+    # Deletar o arquivo .xml correspondente
+    if os.path.exists(xml_path):
+        os.remove(xml_path)
+        print(f"Arquivo {xml_path} deletado.")
+    else:
+        print(f"Arquivo {xml_path} não encontrado.")
+
 def set_img_index(x):
     global img_index, img
     img_index = x
@@ -234,8 +256,8 @@ def increase_index(current_index, last_index):
 
 
 def draw_line(img, x, y, height, width, color):
-    cv2.line(img, (x, 0), (x, height), color, LINE_THICKNESS)
-    cv2.line(img, (0, y), (width, y), color, LINE_THICKNESS)
+    cv2.line(img, (x, 0), (x, height), color, LINE_THICKNESS+1)
+    cv2.line(img, (0, y), (width, y), color, LINE_THICKNESS+1)
 
 
 def yolo_format(class_index, point_1, point_2, width, height):
@@ -399,7 +421,7 @@ def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
                 img_objects.append([class_index, xmin, ymin, xmax, ymax])
                 color = class_rgb[class_index].tolist()
                 # draw bbox
-                cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+                cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS+1)
                 # draw resizing anchors if the object is selected
                 if is_bbox_selected:
                     if idx == selected_bbox:
@@ -416,7 +438,7 @@ def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
                     img_objects.append([class_index, xmin, ymin, xmax, ymax])
                     color = class_rgb[class_index].tolist()
                     # draw bbox
-                    cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+                    cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS+1)
                     # draw resizing anchors if the object is selected
                     if is_bbox_selected:
                         if idx == selected_bbox:
@@ -944,7 +966,7 @@ class LabelTracker():
                 ymax = ymin + h
                 obj = [class_index, xmin, ymin, xmax, ymax]
                 frame_data_dict = json_file_add_object(frame_data_dict, frame_path, anchor_id, pred_counter, obj)
-                cv2.rectangle(next_image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+                cv2.rectangle(next_image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS+1)
                 # save prediction
                 annotation_paths = get_annotation_paths(frame_path, annotation_formats)
                 save_bounding_box(annotation_paths, class_index, (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
@@ -1081,27 +1103,27 @@ if __name__ == '__main__':
         # draw vertical and horizontal guide lines
         draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
         # write selected class
-        class_name = CLASS_LIST[class_index]
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
-        margin = 3
-        text_width, text_height = cv2.getTextSize(class_name, font, font_scale, LINE_THICKNESS)[0]
-        tmp_img = cv2.rectangle(tmp_img, (mouse_x + LINE_THICKNESS, mouse_y - LINE_THICKNESS), (mouse_x + text_width + margin, mouse_y - text_height - margin), complement_bgr(color), -1)
-        tmp_img = cv2.putText(tmp_img, class_name, (mouse_x + margin, mouse_y - margin), font, font_scale, color, LINE_THICKNESS, cv2.LINE_AA)
+        #class_name = CLASS_LIST[class_index]
+        #font = cv2.FONT_HERSHEY_SIMPLEX
+        #font_scale = 0.6
+        #margin = 3
+        #text_width, text_height = cv2.getTextSize(class_name, font, font_scale, LINE_THICKNESS)[0]
+        #tmp_img = cv2.rectangle(tmp_img, (mouse_x + LINE_THICKNESS, mouse_y - LINE_THICKNESS), (mouse_x + text_width + margin, mouse_y - text_height - margin), complement_bgr(color), -1)
+        #tmp_img = cv2.putText(tmp_img, class_name, (mouse_x + margin, mouse_y - margin), font, font_scale, color, LINE_THICKNESS, cv2.LINE_AA)
         # get annotation paths
         img_path = IMAGE_PATH_LIST[img_index]
         annotation_paths = get_annotation_paths(img_path, annotation_formats)
         if dragBBox.anchor_being_dragged is not None:
             dragBBox.handler_mouse_move(mouse_x, mouse_y)
         # draw already done bounding boxes
-        tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
+        tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width+1, height+1)
         # if bounding box is selected add extra info
         if is_bbox_selected:
             tmp_img = draw_info_bb_selected(tmp_img)
         # if first click
         if point_1[0] != -1:
             # draw partial bbox
-            cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, LINE_THICKNESS)
+            cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, LINE_THICKNESS+1)
             # if second click
             if point_2[0] != -1:
                 # save the bounding box
@@ -1174,6 +1196,19 @@ if __name__ == '__main__':
                             class_index = obj[0]
                             color = class_rgb[class_index].tolist()
                             label_tracker.start_tracker(json_file_data, json_file_path, img_path, obj, color, annotation_formats)
+            elif pressed_key == ord('k'):
+                delete_current_image_and_annotations(img_path)
+                if img_path in IMAGE_PATH_LIST:
+                    IMAGE_PATH_LIST.remove(img_path)
+                last_img_index = len(IMAGE_PATH_LIST) - 1
+                if last_img_index >= 0:
+                    if img_index > last_img_index:
+                        img_index = last_img_index
+                    set_img_index(img_index)
+                    cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+                else:
+                    print("No images left.")
+                    break
             # quit key listener
             elif pressed_key == ord('q'):
                 break
