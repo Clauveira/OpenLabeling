@@ -124,6 +124,7 @@ Keyboard, press:
 | a/d | previous/next image |
 | s/w | previous/next class |
 | e | edges |
+| k | delete current image |
 | h | help |
 | q | quit |
 
