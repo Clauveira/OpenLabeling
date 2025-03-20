@@ -1,0 +1,3 @@
+ChaveDeRoda
+Macaco
+Triangulo

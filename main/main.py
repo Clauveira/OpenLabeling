@@ -12,6 +12,7 @@ from tqdm import tqdm
 from lxml import etree
 import xml.etree.cElementTree as ET
 
+mode = 'create'  # 'create' or 'edit'
 
 DELAY = 20 # keyboard delay (in milliseconds)
 WITH_QT = False
@@ -90,8 +91,6 @@ point_2 = (-1, -1)
 # Check if a point belongs to a rectangle
 def pointInRect(pX, pY, rX_left, rY_top, rX_right, rY_bottom):
     return rX_left <= pX <= rX_right and rY_top <= pY <= rY_bottom
-
-
 
 # Class to deal with bbox resizing
 class dragBBox:
@@ -220,8 +219,8 @@ def set_img_index(x):
     img_index = x
     img_path = IMAGE_PATH_LIST[img_index]
     img = cv2.imread(img_path)
-    text = 'Showing image {}/{}, path: {}'.format(str(img_index), str(last_img_index), img_path)
-    display_text(text, 1000)
+    #text = 'Showing image {}/{}, path: {}'.format(str(img_index), str(last_img_index), img_path)
+    #display_text(text, 1000)
 
 
 def set_class_index(x):
@@ -623,8 +622,7 @@ def edit_bbox(obj_to_edit, action):
 
 
 def mouse_listener(event, x, y, flags, param):
-    # mouse callback function
-    global is_bbox_selected, prev_was_double_click, mouse_x, mouse_y, point_1, point_2
+    global is_bbox_selected, prev_was_double_click, mouse_x, mouse_y, point_1, point_2, mode
 
     set_class = True
     if event == cv2.EVENT_MOUSEMOVE:
@@ -655,7 +653,7 @@ def mouse_listener(event, x, y, flags, param):
             if is_bbox_selected:
                 dragBBox.handler_left_mouse_down(x, y, img_objects[selected_bbox])
 
-            if dragBBox.anchor_being_dragged is None:
+            if dragBBox.anchor_being_dragged is None and mode == 'create':
                 if point_1[0] == -1:
                     if is_bbox_selected:
                         if is_mouse_inside_delete_button():
@@ -1063,7 +1061,7 @@ if __name__ == '__main__':
     # Make the class colors the same each session
     # The colors are in BGR order because we're using OpenCV
     class_rgb = [
-        (0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (0, 255, 255),
+        (0, 255, 0), (0, 0, 255), (255, 0, 0), (255, 255, 0), (0, 255, 255),
         (255, 0, 255), (192, 192, 192), (128, 128, 128), (128, 0, 0),
         (128, 128, 0), (0, 128, 0), (128, 0, 128), (0, 128, 128), (0, 0, 128)]
     class_rgb = np.array(class_rgb)
@@ -1101,7 +1099,8 @@ if __name__ == '__main__':
             # draw edges
             tmp_img = draw_edges(tmp_img)
         # draw vertical and horizontal guide lines
-        draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+        if mode == "create":
+            draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
         # get annotation paths
         img_path = IMAGE_PATH_LIST[img_index]
         annotation_paths = get_annotation_paths(img_path, annotation_formats)
@@ -1129,7 +1128,14 @@ if __name__ == '__main__':
 
         if dragBBox.anchor_being_dragged is None:
             ''' Key Listeners START '''
-            if pressed_key == ord('a') or pressed_key == ord('d'):
+            if pressed_key == ord('x'):
+                if mode == 'create':
+                    mode = 'edit'
+                    display_text('Mode changed to EDIT', 1000)
+                else:
+                    mode = 'create'
+                    display_text('Mode changed to CREATE', 1000)
+            elif pressed_key == ord('a') or pressed_key == ord('d'):
                 # show previous image key listener
                 if pressed_key == ord('a'):
                     img_index = decrease_index(img_index, last_img_index)
@@ -1138,6 +1144,46 @@ if __name__ == '__main__':
                     img_index = increase_index(img_index, last_img_index)
                 set_img_index(img_index)
                 cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+            elif pressed_key == ord('f'):
+                while True:
+                    img_index = increase_index(img_index, last_img_index)
+                    set_img_index(img_index)
+                    cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+                    img_path = IMAGE_PATH_LIST[img_index]
+                    annotation_paths = get_annotation_paths(img_path, annotation_formats)
+                    tmp_img = img.copy()
+                    height, width = tmp_img.shape[:2]
+                    tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
+                    numero_objetos = len(img_objects)
+                    if numero_objetos > 1 or numero_objetos < 1:
+                        print(f"Numero Objetos: {numero_objetos}")
+                        break
+                    pressed_key = cv2.waitKey(1)
+                    if pressed_key == ord('a') or pressed_key == ord('d') or pressed_key == ord('f'):
+                        break
+                    if img_index == last_img_index:
+                        print("Fim da lista de imagens.")
+                        break
+            elif pressed_key == ord('i'):
+                while True:
+                    img_index = increase_index(img_index, last_img_index)
+                    set_img_index(img_index)
+                    cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+                    img_path = IMAGE_PATH_LIST[img_index]
+                    annotation_paths = get_annotation_paths(img_path, annotation_formats)
+                    tmp_img = img.copy()
+                    height, width = tmp_img.shape[:2]
+                    tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
+                    numero_objetos = len(img_objects)
+                    if numero_objetos >= 1:
+                        print(f"Numero Objetos: {numero_objetos}")
+                        break
+                    pressed_key = cv2.waitKey(1)
+                    if pressed_key == ord('a') or pressed_key == ord('d') or pressed_key == ord('f'):
+                        break
+                    if img_index == last_img_index:
+                        print("Fim da lista de imagens.")
+                        break
             elif pressed_key == ord('s') or pressed_key == ord('w'):
                 # change down current class key listener
                 if pressed_key == ord('s'):
